@@ -1,10 +1,10 @@
 import 'dart:async';
+import 'package:achraj/src/no_internet_page.dart';
+import 'package:achraj/src/web_view_stack.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-
-import 'src/no_internet_page.dart'; // Assuming your NoInternetPage is in this path
-import 'src/web_view_stack.dart'; // Assuming WebViewStack is in this path
 
 void main() {
   runApp(
@@ -24,78 +24,61 @@ class WebViewApp extends StatefulWidget {
 }
 
 class _WebViewAppState extends State<WebViewApp> {
-  late WebViewController controller;
-  bool isConnected = true;
-  late StreamSubscription<ConnectivityResult> subscription; // Subscription for listening to connectivity changes
+  late StreamSubscription<InternetStatus> listener;
+  late final WebViewController controller;
+  bool isConnected = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialize the WebViewController
+    _startListening();
     controller = WebViewController()
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onWebResourceError: (error) {
-            setState(() {
-              isConnected = false;
-            });
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
-
-    // Start listening to connectivity changes
-    subscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
-      _updateConnectionStatus(result);
-    });
-  }
-
-  // Method to handle connectivity changes
-  Future<void> _updateConnectionStatus(ConnectivityResult result) async {
-    if (result == ConnectivityResult.none) {
-      // No internet access, show NoInternetPage
-      setState(() {
-        isConnected = false;
-      });
-    } else {
-      // Internet access is available, reload WebView if necessary
-      setState(() {
-        isConnected = true;
-      });
-      if (controller != null) {
-        controller.reload(); // Reload the WebView on reconnection
-      }
-    }
+      ..loadRequest(
+        Uri.parse('https://devs.pearl-developer.com/achraj/'),
+      );
   }
 
   @override
   void dispose() {
-    subscription.cancel(); // Cancel the subscription when the widget is disposed
+    listener.cancel(); // Cancel the subscription when disposing
     super.dispose();
   }
 
-  Future<void> _reloadWebView() async {
-    if (isConnected) {
-      controller.reload(); // Reloads the WebView on refresh
-    }
+  void _startListening() {
+    listener = InternetConnection().onStatusChange.listen((InternetStatus status) {
+      setState(() {
+        isConnected = status == InternetStatus.connected;
+
+        if (isConnected) {
+          // Load the web view if connected
+          loadWebView();
+        }
+      });
+    });
+  }
+
+  void loadWebView() {
+    controller.loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
   }
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.black, // Use your desired color here
+      statusBarIconBrightness: Brightness.light, // Use Brightness.dark if your status bar icons are light-colored
+    ));
     return Scaffold(
       body: SafeArea(
         child: isConnected
-            ? Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: _reloadWebView,
-              child: WebViewStack(controller: controller),
-            ),
-          ],
+            ? RefreshIndicator(
+          onRefresh: () async {
+            // Reload the WebView on refresh
+            loadWebView();
+          },
+          child: WebViewStack(controller: controller),
         )
-            : NoInternetPage(
-          onRetry: _reloadWebView, // Retry on network error
+            : const NoInternetPage(
+          onRetry: null, // You can pass a retry function here
         ),
       ),
     );
