@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
@@ -65,15 +66,21 @@ class _WebViewAppState extends State<WebViewApp> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.black, // Use your desired color here
+      statusBarIconBrightness: Brightness
+          .light, // Use Brightness.dark if your status bar icons are light-colored
+    ));
     return Scaffold(
-      body: isConnected
+      body:SafeArea(child:  isConnected
           ? RefreshIndicator(
-              onRefresh: _reloadWebView,
-              child: WebViewStack(controller: controller),
-            )
+        onRefresh: _reloadWebView,
+        child: WebViewStack(controller: controller),
+      )
           : const NoInternetPage(
-              onRetry: null, // You can also pass a retry function here
-            ),
+        onRetry: null, // You can also pass a retry function here
+      ),
+      )
     );
   }
 }
