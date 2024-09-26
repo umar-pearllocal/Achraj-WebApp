@@ -1,10 +1,10 @@
+import 'dart:async';
+import 'package:achraj/src/no_internet_page.dart';
+import 'package:achraj/src/web_view_stack.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-
-import 'src/web_view_stack.dart';
-import 'src/no_internet_page.dart';
 
 void main() {
   runApp(
@@ -24,63 +24,63 @@ class WebViewApp extends StatefulWidget {
 }
 
 class _WebViewAppState extends State<WebViewApp> {
+  late StreamSubscription<InternetStatus> listener;
   late final WebViewController controller;
-  bool isConnected = true;
+  bool isConnected = false;
 
   @override
   void initState() {
     super.initState();
+    _startListening();
     controller = WebViewController()
       ..loadRequest(
         Uri.parse('https://devs.pearl-developer.com/achraj/'),
       );
-    checkConnectivity();
   }
 
-  Future<void> checkConnectivity() async {
-    var connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      setState(() {
-        isConnected = false;
-      });
-    } else {
-      setState(() {
-        isConnected = true;
-      });
-    }
+  @override
+  void dispose() {
+    listener.cancel(); // Cancel the subscription when disposing
+    super.dispose();
   }
 
-  Future<void> _reloadWebView() async {
-    var connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult != ConnectivityResult.none) {
+  void _startListening() {
+    listener = InternetConnection().onStatusChange.listen((InternetStatus status) {
       setState(() {
-        isConnected = true;
-        controller.reload(); // Reloads the WebView
+        isConnected = status == InternetStatus.connected;
+
+        if (isConnected) {
+          // Load the web view if connected
+          loadWebView();
+        }
       });
-    } else {
-      setState(() {
-        isConnected = false;
-      });
-    }
+    });
+  }
+
+  void loadWebView() {
+    controller.loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
   }
 
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.black, // Use your desired color here
-      statusBarIconBrightness: Brightness
-          .light, // Use Brightness.dark if your status bar icons are light-colored
+      statusBarIconBrightness: Brightness.light, // Use Brightness.dark if your status bar icons are light-colored
     ));
     return Scaffold(
-      body:SafeArea(child:  isConnected
-          ? RefreshIndicator(
-        onRefresh: _reloadWebView,
-        child: WebViewStack(controller: controller),
-      )
-          : const NoInternetPage(
-        onRetry: null, // You can also pass a retry function here
+      body: SafeArea(
+        child: isConnected
+            ? RefreshIndicator(
+          onRefresh: () async {
+            // Reload the WebView on refresh
+            loadWebView();
+          },
+          child: WebViewStack(controller: controller),
+        )
+            : const NoInternetPage(
+          onRetry: null, // You can pass a retry function here
+        ),
       ),
-      )
     );
   }
 }
