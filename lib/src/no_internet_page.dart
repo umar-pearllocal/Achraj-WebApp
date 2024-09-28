@@ -7,21 +7,17 @@ class NoInternetPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.wifi_off, size: 100),
-          const SizedBox(height: 20),
-          const Text(
+          Icon(Icons.wifi_off, size: 100),
+          SizedBox(height: 20),
+          Text(
             'No Internet Connection',
             style: TextStyle(fontSize: 24),
           ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: const Text('Retry'),
-          ),
+          SizedBox(height: 20)
         ],
       ),
     );

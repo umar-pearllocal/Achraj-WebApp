@@ -31,16 +31,16 @@ class _WebViewAppState extends State<WebViewApp> {
   @override
   void initState() {
     super.initState();
-    _startListening();
     controller = WebViewController()
       ..loadRequest(
-        Uri.parse('https://devs.pearl-developer.com/achraj/'),
+        Uri.parse('https://doonsilk.com/'),
       );
+    _startListening();
   }
 
   @override
   void dispose() {
-    listener.cancel(); // Cancel the subscription when disposing
+    listener.cancel();
     super.dispose();
   }
 
@@ -58,7 +58,17 @@ class _WebViewAppState extends State<WebViewApp> {
   }
 
   void loadWebView() {
-    controller.loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
+    controller.loadRequest(Uri.parse('https://doonsilk.com/'));
+  }
+
+  // Method to handle Android back button to navigate back in WebView
+  Future<bool> _onWillPop(BuildContext context) async {
+    if (await controller.canGoBack()) {
+      controller.goBack();
+      return Future.value(false); // Don't exit the app, just go back
+    } else {
+      return Future.value(true); // Exit the app if there's no back history
+    }
   }
 
   @override
@@ -67,18 +77,22 @@ class _WebViewAppState extends State<WebViewApp> {
       statusBarColor: Colors.black, // Use your desired color here
       statusBarIconBrightness: Brightness.light, // Use Brightness.dark if your status bar icons are light-colored
     ));
-    return Scaffold(
-      body: SafeArea(
-        child: isConnected
-            ? RefreshIndicator(
-          onRefresh: () async {
-            // Reload the WebView on refresh
-            loadWebView();
-          },
-          child: WebViewStack(controller: controller),
-        )
-            : const NoInternetPage(
-          onRetry: null, // You can pass a retry function here
+
+    return WillPopScope(
+      onWillPop: () => _onWillPop(context),
+      child: Scaffold(
+        body: SafeArea(
+          child: isConnected
+              ? RefreshIndicator(
+            onRefresh: () async {
+              // Reload the WebView on refresh
+              loadWebView();
+            },
+            child: WebViewStack(controller: controller),
+          )
+              : const NoInternetPage(
+            onRetry: null,
+          ),
         ),
       ),
     );
