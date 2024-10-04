@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class NoInternetPage extends StatelessWidget {
   final Function()? onRetry;
 
-  const NoInternetPage({Key? key, this.onRetry}) : super(key: key);
+  const NoInternetPage({super.key, this.onRetry});
 
   @override
   Widget build(BuildContext context) {

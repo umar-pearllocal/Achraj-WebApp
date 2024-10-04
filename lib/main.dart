@@ -4,13 +4,19 @@ import 'package:achraj/src/web_view_stack.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:splashify/splashify.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
   runApp(
     MaterialApp(
       theme: ThemeData(useMaterial3: true),
-      home: const WebViewApp(),
+      home: Splashify(
+        imagePath: 'assets/image.png',
+        navigateDuration: 4,
+        imageSize: 400,
+        child: const WebViewApp(),
+      ),
       debugShowCheckedModeBanner: false,
     ),
   );
@@ -27,15 +33,27 @@ class _WebViewAppState extends State<WebViewApp> {
   late StreamSubscription<InternetStatus> listener;
   late final WebViewController controller;
   bool isConnected = false;
+  bool canNavigateBack = false;
 
   @override
   void initState() {
     super.initState();
     controller = WebViewController()
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            if (request.url.startsWith('https://www.youtube.com/')) {
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
       ..loadRequest(
-        Uri.parse('https://doonsilk.com/'),
+        Uri.parse('https://devs.pearl-developer.com/achraj/'),
       );
     _startListening();
+    _checkNavigationState();
   }
 
   @override
@@ -46,52 +64,58 @@ class _WebViewAppState extends State<WebViewApp> {
 
   void _startListening() {
     listener = InternetConnection().onStatusChange.listen((InternetStatus status) {
+      bool previousConnectionStatus = isConnected;
       setState(() {
         isConnected = status == InternetStatus.connected;
-
-        if (isConnected) {
-          // Load the web view if connected
-          loadWebView();
-        }
       });
+
+      if (!previousConnectionStatus && isConnected) {
+        loadWebView();
+      }
     });
   }
 
   void loadWebView() {
-    controller.loadRequest(Uri.parse('https://doonsilk.com/'));
+    controller.loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
   }
 
-  // Method to handle Android back button to navigate back in WebView
-  Future<bool> _onWillPop(BuildContext context) async {
+  void _checkNavigationState() async {
+    canNavigateBack = await controller.canGoBack();
+    setState(() {});
+  }
+
+  Future<bool> _onWillPop() async {
     if (await controller.canGoBack()) {
       controller.goBack();
-      return Future.value(false); // Don't exit the app, just go back
+      return false;
     } else {
-      return Future.value(true); // Exit the app if there's no back history
+      return true; // Allows the app to close if no navigation history
     }
   }
 
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.black, // Use your desired color here
-      statusBarIconBrightness: Brightness.light, // Use Brightness.dark if your status bar icons are light-colored
+      statusBarColor: Colors.black,
+      statusBarIconBrightness: Brightness.light,
     ));
 
     return WillPopScope(
-      onWillPop: () => _onWillPop(context),
+      onWillPop: _onWillPop, // Handle back button press
       child: Scaffold(
         body: SafeArea(
           child: isConnected
               ? RefreshIndicator(
             onRefresh: () async {
-              // Reload the WebView on refresh
               loadWebView();
             },
             child: WebViewStack(controller: controller),
           )
-              : const NoInternetPage(
-            onRetry: null,
+              : NoInternetPage(
+            onRetry: () {
+              _startListening();
+              loadWebView();
+            },
           ),
         ),
       ),
