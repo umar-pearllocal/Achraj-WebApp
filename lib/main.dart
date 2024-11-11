@@ -61,19 +61,28 @@ class _WebViewAppState extends State<WebViewApp> {
     listener.cancel();
     super.dispose();
   }
-
   void _startListening() {
-    listener = InternetConnection().onStatusChange.listen((InternetStatus status) {
-      bool previousConnectionStatus = isConnected;
-      setState(() {
-        isConnected = status == InternetStatus.connected;
-      });
+    Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (!mounted) {
+        timer.cancel(); // Cancel the timer if widget is disposed
+        return;
+      }
 
-      if (!previousConnectionStatus && isConnected) {
-        loadWebView();
+      bool connectionStatus = await InternetConnection().hasInternetAccess;
+      if (isConnected != connectionStatus) {
+        if (mounted) {  // Check if still mounted
+          setState(() {
+            isConnected = connectionStatus;
+          });
+          if (isConnected) {
+            loadWebView();
+          }
+        }
       }
     });
   }
+
+
 
   void loadWebView() {
     controller.loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
@@ -113,7 +122,6 @@ class _WebViewAppState extends State<WebViewApp> {
           )
               : NoInternetPage(
             onRetry: () {
-              _startListening();
               loadWebView();
             },
           ),
