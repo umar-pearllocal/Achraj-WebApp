@@ -8,15 +8,17 @@ import 'package:splashify/splashify.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(
     MaterialApp(
       theme: ThemeData(useMaterial3: true),
       home: Splashify(
-        imagePath: 'assets/image.png',
-        navigateDuration: 4,
-        imageSize: 400,
-        child: const WebViewApp(),
-      ),
+          imagePath: 'assets/image.png',
+          backgroundColor: Colors.white,
+          imageSize: 300,
+          imageFadeIn: true,
+          child: const WebViewApp()),
       debugShowCheckedModeBanner: false,
     ),
   );
@@ -31,75 +33,53 @@ class WebViewApp extends StatefulWidget {
 
 class _WebViewAppState extends State<WebViewApp> {
   late StreamSubscription<InternetStatus> listener;
-  late final WebViewController controller;
+  late WebViewController controller;
   bool isConnected = false;
-  bool canNavigateBack = false;
+  bool isReady = false; // To track whether the 2-second delay is over
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize WebView controller
     controller = WebViewController()
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) {
-            if (request.url.startsWith('https://www.youtube.com/')) {
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
       ..loadRequest(
         Uri.parse('https://devs.pearl-developer.com/achraj/'),
       );
+
+    // Introduce a 2-second delay before checking the network connection
+    Future.delayed(const Duration(seconds: 2), () {
+      setState(() {
+        isReady = true; // Mark the app as ready to display content after 2 seconds
+      });
+    });
+
     _startListening();
-    _checkNavigationState();
   }
 
   @override
   void dispose() {
-    listener.cancel();
+    listener.cancel(); // Cancel the subscription when disposing
     super.dispose();
   }
-  void _startListening() {
-    Timer.periodic(const Duration(seconds: 3), (timer) async {
-      if (!mounted) {
-        timer.cancel(); // Cancel the timer if widget is disposed
-        return;
-      }
 
-      bool connectionStatus = await InternetConnection().hasInternetAccess;
-      if (isConnected != connectionStatus) {
-        if (mounted) {  // Check if still mounted
-          setState(() {
-            isConnected = connectionStatus;
-          });
-          if (isConnected) {
-            loadWebView();
-          }
-        }
-      }
+  void _startListening() {
+    listener = InternetConnection().onStatusChange.listen((InternetStatus status) {
+      setState(() {
+        isConnected = status == InternetStatus.connected;
+      });
+    });
+
+    // Check initial connectivity status
+    InternetConnection().hasInternetAccess.then((connected) {
+      setState(() {
+        isConnected = connected;
+      });
     });
   }
 
-
-
   void loadWebView() {
     controller.loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
-  }
-
-  void _checkNavigationState() async {
-    canNavigateBack = await controller.canGoBack();
-    setState(() {});
-  }
-
-  Future<bool> _onWillPop() async {
-    if (await controller.canGoBack()) {
-      controller.goBack();
-      return false;
-    } else {
-      return true; // Allows the app to close if no navigation history
-    }
   }
 
   @override
@@ -109,22 +89,27 @@ class _WebViewAppState extends State<WebViewApp> {
       statusBarIconBrightness: Brightness.light,
     ));
 
-    return WillPopScope(
-      onWillPop: _onWillPop, // Handle back button press
-      child: Scaffold(
-        body: SafeArea(
-          child: isConnected
-              ? RefreshIndicator(
-            onRefresh: () async {
-              loadWebView();
-            },
-            child: WebViewStack(controller: controller),
-          )
-              : NoInternetPage(
-            onRetry: () {
-              loadWebView();
-            },
-          ),
+    // Check if the app is ready and has finished the 2-second delay
+    if (!isReady) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: isConnected
+            ? RefreshIndicator(
+          onRefresh: () async {
+            // Reload the WebView on refresh
+            loadWebView();
+          },
+          child: WebViewStack(controller: controller),
+        )
+            : const NoInternetPage(
+          onRetry: null, // You can pass a retry function here
         ),
       ),
     );
