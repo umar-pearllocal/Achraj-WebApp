@@ -3,7 +3,7 @@ name: Flutter CI
 on:
   push:
     branches:
-      - master
+      - ali
 
 jobs:
   build:
