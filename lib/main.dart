@@ -14,7 +14,7 @@ void main() {
     MaterialApp(
       theme: ThemeData(useMaterial3: true),
       home: Splashify(
-          imagePath: 'assets/images.png',
+          imagePath: 'assets/image.png',
           backgroundColor: Colors.white,
           imageSize: 300,
           imageFadeIn: true,
