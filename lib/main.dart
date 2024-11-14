@@ -48,7 +48,7 @@ class _WebViewAppState extends State<WebViewApp> {
       );
 
     // Introduce a 2-second delay before checking the network connection
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 3), () {
       setState(() {
         isReady = true; // Mark the app as ready to display content after 2 seconds
       });
