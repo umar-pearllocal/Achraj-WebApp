@@ -43,6 +43,7 @@ class _WebViewAppState extends State<WebViewApp> {
 
     // Initialize WebView controller
     controller = WebViewController()
+      ..setUserAgent("WEBVIEW_APP")
       ..loadRequest(
         Uri.parse('https://devs.pearl-developer.com/achraj/'),
       );
@@ -79,7 +80,9 @@ class _WebViewAppState extends State<WebViewApp> {
   }
 
   void loadWebView() {
-    controller.loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
+    controller
+        ..setUserAgent("WEBVIEW_APP")
+        ..loadRequest(Uri.parse('https://devs.pearl-developer.com/achraj/'));
   }
 
   @override
@@ -91,7 +94,7 @@ class _WebViewAppState extends State<WebViewApp> {
 
     // Check if the app is ready and has finished the 2-second delay
     if (!isReady) {
-      return Scaffold(
+      return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
         ),
